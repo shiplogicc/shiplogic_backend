@@ -4,59 +4,99 @@ from django.db import models
 
 from location.models import *
 from django.contrib.auth.models import User
+from customer.models import *
 # Create your models here.
 
-class Customer(models.Model):
-    user                = models.ForeignKey(User,null = False,db_index = True)
-    name                = models.CharField(max_length=100)
-    code                = models.CharField(max_length=30)
-    activation_status   = models.BooleanField(blank=True)
-    activation_date     = models.DateField(blank=True,null=True)
-    remittance_cycle    = models.SmallIntegerField(default=7)
-    added_on          = models.DateTimeField(auto_now_add=True)
-    added_by          = models.ForeignKey(User,related_name='created_by', blank=True,null=True)
-    updated_on          = models.DateTimeField(auto_now=True)
-    updated_by          = models.ForeignKey(User,related_name='updated_by', blank=True,null=True)
-    address             = models.ForeignKey(Address2, blank=True,null=True)
-    contact_person      = models.ForeignKey(Contact,blank=True,null=True)
-    pan_number          = models.CharField(max_length=20,blank=True,null=True)
-    Gst_number          = models.CharField(max_length=20,blank=True,null=True)
-    website             = models.CharField(max_length=200,blank=True,null=True)
-    email               = models.CharField(max_length=200,blank=True,null=True)
-    approved_by            = models.ForeignKey(User,related_name='approver',blank=True,null=True)
-    bill_delivery_email = models.BooleanField(default=True)
-    bill_delivery_hand  = models.BooleanField(default=True)
-    referred_by         = models.CharField(max_length=30,blank=True,null=True)
-    
-    class Meta:
-        ordering = ('name',)
 
-    def __unicode__(self):
-        return self.name + " - " + self.code
+class UserLogin(models.Model):
+    user = models.OneToOneField(User,on_delete = models.SET_NULL,null = True,blank = True)
+    fullname = models.CharField(max_length = 250,null = False,)
+    mobile = models.CharField(max_length = 15,null = False,db_index = True)
+    user_type = models.CharField(max_length = 50,null = False)
+    email = models.CharField(max_length = 250,null = False,db_index = True)
+    mobile_verified = models.BooleanField(default=False)
+    email_verified = models.BooleanField(default=False)
+    is_password_set = models.BooleanField(default=False)
+    added_on = models.DateTimeField(auto_now_add=True)
+    updated_on = models.DateTimeField(auto_now = True)
+    status = models.IntegerField(default = 0,db_index = True)
+    customer = models.ForeignKey(Customer,on_delete = models.SET_NULL,null = True,blank = True)
+    profile_verified = models.BooleanField(default=False)
 
 
 class Role(models.Model):
-    name = models.Charfield(max_length = 50,null = False,)
-    role_url = models.Charfield(max_length = 100,null = False,)
+    name = models.CharField(max_length = 50,null = False,)
+    role_url = models.CharField(max_length = 100,null = False,)
     activatio_status = models.BooleanField(default=True)
     added_on = models.DateTimeField(auto_now_add=True)
     updated_on = models.DateTimeField(auto_now = True)
 
 
 
-class CustomerEmployee(models.Model)
-    user = models.ForeignKey(User,null = False)
-    customer = models.ForeignKey(Customer,db_index = True,null = False)
-    name = models.Charfield(max_length = 100,null = False,)
-    email = models.Charfield(max_length = 150,null = False,)
-    mobile_no = models.Charfield(max_length = 20,null = False,) 
+class CustomerEmployee(models.Model):
+    '''
+    Relevance to be identified ?
+    '''
+    parent_user = models.ForeignKey(User,null = True,on_delete = models.SET_NULL,related_name = "parent_user")
+    child_user = models.ForeignKey(User,null = True,on_delete = models.SET_NULL,related_name = "child_user")
+    customer = models.ForeignKey(Customer,db_index = True,null = True,on_delete = models.SET_NULL)
+    name = models.CharField(max_length = 100,null = False,)
+    email = models.CharField(max_length = 150,null = False,)
+    mobile_no = models.CharField(max_length = 20,null = False,) 
     activation_status = models.BooleanField(default=True)
     added_on = models.DateTimeField(auto_now_add=True)
     updated_on = models.DateTimeField(auto_now = True)
-    role_access = models.ManyToManyField(role)
+    role_access = models.ManyToManyField(Role)
 
 
     class Meta():
-        unique_together = [['customer', 'email','mobile_no']]
+        unique_together = [['customer', 'email','mobile_no'],['parent_user','child_user']]
+
+
+
+
+class UserSecretCredentials(models.Model):
+
+    user = models.OneToOneField(User, on_delete=models.SET_NULL, null=True, blank=True)
+
+    client_id = models.CharField(max_length =250, null=True, blank=True)
+
+    client_secret = models.CharField(max_length =250, null=True, blank=True)
+
+    status = models.IntegerField(default=1, db_index=True)
+
+    added_on = models.DateTimeField(auto_now_add=True, db_index=True)
+
+    updated_on = models.DateTimeField(null=True, blank=True, db_index=True)
+
+
+
+
+class UserDocumentDetails(models.Model):
+    user = models.ForeignKey(UserLogin,null = True,on_delete = models.SET_NULL)
+    document_name = models.CharField(max_length =250, null=True, blank=True)
+    document_parameters = models.JSONField(null=True, blank=True)
+    added_on = models.DateTimeField(auto_now_add=True, db_index=True)
+    updated_on = models.DateTimeField(null=True, blank=True, db_index=True)
+
+
+
+
+
+class BackgroundVerificationSetting(models.Model):
+    verification_key  = models.CharField(max_length = 250, db_index = True, null = True, blank = True)
+    url               = models.CharField(max_length = 250, db_index = True, null = True, blank = True)
+    username          = models.CharField(max_length=75, db_index=True, null = True, blank = True)
+    password          = models.CharField(max_length=75, db_index=True, null = True, blank = True)
+    module            = models.CharField(max_length=75, db_index=True, null = True, blank = True)
+    process_function  = models.CharField(max_length=75, db_index=True, null = True, blank = True)
+    logging_required  = models.IntegerField(default=0, db_index=True)
+    added_on          = models.DateTimeField(auto_now_add = True, db_index = True)
+    updated_on        = models.DateTimeField(auto_now = True, db_index = True)
+    activation_status = models.BooleanField(default = True,  db_index = True)
+    verification_value  = models.CharField(max_length = 250, null = True, blank = True)
+    def __unicode__(self):
+        return str(self.verification_key) + " - "+ str(self.activation_status)
+
 
 
